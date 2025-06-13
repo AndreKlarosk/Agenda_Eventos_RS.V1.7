@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Updated exportToPDF to export by period
+    // Updated exportToPDF to export by period and group by event type
     async function exportToPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('landscape'); // Set orientation to landscape
@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Centralize title (updated for two lines)
         doc.setFontSize(16);
-        const titleLine1 = `CONGREGAÇÃO CRISTA NO BRASIL`;
+        const titleLine1 = `CONGREGAÇÃO CRISTÃ NO BRASIL`;
         const titleLine2 = `Relatório - Período: ${start} a ${end}`;
 
         const textWidth1 = doc.getStringUnitWidth(titleLine1) * doc.internal.getFontSize() / doc.internal.scaleFactor;
@@ -452,95 +452,122 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.setFontSize(12);
             doc.text(`Nenhum evento agendado para o período de ${start} a ${end}.`, 14, 40); // Adjusted Y position
         } else {
-            // Ordena os eventos pela data e depois pela hora
-            events.sort((a, b) => {
-                const dateA = a.id.split('-').slice(0, 3).join('-');
-                const dateB = b.id.split('-').slice(0, 3).join('-');
-
-                if (dateA !== dateB) {
-                    return new Date(dateA) - new Date(dateB);
+            // Group events by type
+            const groupedEvents = {};
+            events.forEach(event => {
+                const type = event.eventType;
+                if (!groupedEvents[type]) {
+                    groupedEvents[type] = [];
                 }
-                const hourA = a.hour || '00:00';
-                const hourB = b.hour || '00:00';
-                return hourA.localeCompare(hourB);
+                groupedEvents[type].push(event);
             });
 
-            const tableColumnTitles = ["Data", "Horário", "Tipo de Evento", "Cidade", "Detalhes", "Descrição", "Participantes"];
-            const tableBody = events.map(event => {
-                const datePart = event.id.split('-').slice(0, 3).join('-');
-                const [y, m, d] = datePart.split('-');
-                const formattedDate = `${d}/${m}/${y}`;
+            // Define the order of event types for the PDF
+            const eventTypeOrder = [
+                'Reunião', 'Batismo', 'Reunião para Mocidade',
+                'Ensaio Regional', 'Ensaio Local', 'Outro'
+            ];
 
-                let eventTypeDisplay = event.eventType; // Default to stored eventType
-                let eventDetails = '';
-                let city = event.city || ''; // City is now from the general field
+            let currentY = 40; // Starting Y position for content after main title
 
-                if (event.eventType === 'Reunião' && event.reuniaoTypes && event.reuniaoTypes.length > 0) {
-                    // Always show the first reunion type's full name in "Tipo de Evento"
-                    eventTypeDisplay = reuniaoFullNames[event.reuniaoTypes[0]] || event.reuniaoTypes[0];
-
-                    // For "Detalhes" column in 'Reunião' events
-                    if (event.reuniaoTypes.length > 1) {
-                        // If there's more than one reunion type, list the *additional* types
-                        // Filter out the first type so it's not repeated in "Detalhes"
-                        const otherReunionTypes = event.reuniaoTypes.filter((type, index) => index !== 0);
-                        const otherFullNames = otherReunionTypes.map(type => reuniaoFullNames[type] || type);
-                        eventDetails = `Outros tipos: ${otherFullNames.join(', ')}`;
-                    } else {
-                        // If only one reunion type, no need to repeat in "Detalhes"
-                        eventDetails = 'N/A'; // Or leave empty, depending on preference
-                    }
-                } else if (event.eventType === 'Batismo' || event.eventType === 'Reunião para Mocidade') {
-                    eventDetails = `Ancião: ${event.ancientsName || 'N/A'}`;
-                } else if (event.eventType === 'Ensaio Regional') {
-                    eventDetails = `Ancião: ${event.ancientsName || 'N/A'}\nEncarregado Regional: ${event.regionalManager || 'N/A'}`;
-                } else if (event.eventType === 'Ensaio Local') {
-                    eventDetails = `Encarregado Local: ${event.localManager || 'N/A'}`;
-                } else if (event.eventType === 'Outro') {
-                    eventDetails = `Título: ${event.title || 'N/A'}`;
-                } else {
-                    eventDetails = 'N/A'; // Default for other types if no specific details
+            // Helper to add new page if content exceeds current page
+            const addPageIfNeeded = (heightNeeded) => {
+                if (currentY + heightNeeded > doc.internal.pageSize.height - 20) { // 20px margin from bottom
+                    doc.addPage('landscape');
+                    currentY = 14; // Reset Y for new page, leaving space for a small top margin
                 }
+            };
 
+            // Iterate through event types in a defined order
+            eventTypeOrder.forEach(type => {
+                const eventsOfType = groupedEvents[type];
+                if (eventsOfType && eventsOfType.length > 0) {
+                    // Sort events within each type by date and then by hour
+                    eventsOfType.sort((a, b) => {
+                        const dateA = a.id.split('-').slice(0, 3).join('-');
+                        const dateB = b.id.split('-').slice(0, 3).join('-');
 
-                const participants = event.participants && event.participants.length > 0 ? event.participants.join(', ') : "Nenhum";
+                        if (dateA !== dateB) {
+                            return new Date(dateA) - new Date(dateB);
+                        }
+                        const hourA = a.hour || '00:00';
+                        const hourB = b.hour || '00:00';
+                        return hourA.localeCompare(hourB);
+                    });
 
-                return [
-                    formattedDate,
-                    event.hour || "—",
-                    eventTypeDisplay,
-                    city,
-                    eventDetails,
-                    event.description || "Sem descrição",
-                    participants
-                ];
-            });
+                    // Add a title for the event type group
+                    addPageIfNeeded(15); // Check if enough space for type title + some padding
+                    doc.setFontSize(14);
+                    doc.text(`${type}s`, 14, currentY);
+                    currentY += 7; // Space after section title
 
-            doc.autoTable({
-                head: [tableColumnTitles],
-                body: tableBody,
-                startY: 40, // Adjusted startY to accommodate the two-line title
-                // Adjust column styles for better fit in landscape
-                columnStyles: {
-                    // Adjust column widths as needed for landscape
-                    0: { cellWidth: 25 }, // Data
-                    1: { cellWidth: 20 }, // Horário
-                    2: { cellWidth: 55 }, // Tipo de Evento (increased width for full name)
-                    3: { cellWidth: 25 }, // Cidade
-                    4: { cellWidth: 45 }, // Detalhes (multiline)
-                    5: { cellWidth: 'auto', minCellHeight: 15 }, // Descrição (auto width, min height for multiline)
-                    6: { cellWidth: 'auto', minCellHeight: 15 }  // Participantes (auto width, min height for multiline)
-                },
-                didParseCell: function(data) {
-                    // This callback helps format cell content before rendering
-                    if (data.column.index === 4 && data.cell.raw) { // For 'Detalhes' column
-                        data.cell.text = String(data.cell.raw).split('\n'); // Split by newline for multiline content
-                    }
+                    const tableColumnTitles = ["Data", "Horário", "Cidade", "Detalhes", "Descrição", "Participantes"];
+                    const tableBody = eventsOfType.map(event => {
+                        const datePart = event.id.split('-').slice(0, 3).join('-');
+                        const [y, m, d] = datePart.split('-');
+                        const formattedDate = `${d}/${m}/${y}`;
+
+                        let eventDetails = '';
+                        const city = event.city || '';
+
+                        if (event.eventType === 'Reunião' && event.reuniaoTypes && event.reuniaoTypes.length > 0) {
+                            const fullNames = event.reuniaoTypes.map(rType => reuniaoFullNames[rType] || rType);
+                            eventDetails = `Tipos: ${fullNames.join(', ')}`;
+                        } else if (event.eventType === 'Batismo' || event.eventType === 'Reunião para Mocidade') {
+                            eventDetails = `Ancião: ${event.ancientsName || 'N/A'}`;
+                        } else if (event.eventType === 'Ensaio Regional') {
+                            eventDetails = `Ancião: ${event.ancientsName || 'N/A'}\nEncarregado Regional: ${event.regionalManager || 'N/A'}`;
+                        } else if (event.eventType === 'Ensaio Local') {
+                            eventDetails = `Encarregado Local: ${event.localManager || 'N/A'}`;
+                        } else if (event.eventType === 'Outro') {
+                            eventDetails = `Título: ${event.title || 'N/A'}`;
+                        } else {
+                            eventDetails = 'N/A';
+                        }
+
+                        const participants = event.participants && event.participants.length > 0 ? event.participants.join(', ') : "Nenhum";
+
+                        return [
+                            formattedDate,
+                            event.hour || "—",
+                            city,
+                            eventDetails,
+                            event.description || "Sem descrição",
+                            participants
+                        ];
+                    });
+
+                    doc.autoTable({
+                        head: [tableColumnTitles],
+                        body: tableBody,
+                        startY: currentY,
+                        theme: 'grid', // Add grid lines for better readability
+                        headStyles: { fillColor: [44, 62, 80] }, // Dark blue header
+                        styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+                        columnStyles: {
+                            0: { cellWidth: 25 }, // Data
+                            1: { cellWidth: 15 }, // Horário
+                            2: { cellWidth: 25 }, // Cidade
+                            3: { cellWidth: 60 }, // Detalhes (increased for multiline)
+                            4: { cellWidth: 70 }, // Descrição (increased for multiline)
+                            5: { cellWidth: 'auto', minCellWidth: 40 } // Participantes (auto, but with a minimum)
+                        },
+                        didDrawPage: function(data) {
+                            // Update currentY after table is drawn
+                            currentY = data.cursor.y + 10; // Add some padding after the table
+                        },
+                        didParseCell: function(data) {
+                            // This callback helps format cell content before rendering
+                            if (data.column.index === 3 && data.cell.raw) { // For 'Detalhes' column
+                                data.cell.text = String(data.cell.raw).split('\n'); // Split by newline for multiline content
+                            }
+                        }
+                    });
                 }
             });
         }
 
-        doc.save(`Relatorio_Periodo_${start}_a_${end}.pdf`);
+        doc.save(`Relatorio_Por_Tipo_Periodo_${start}_a_${end}.pdf`);
     }
 
     // EVENT LISTENERS
