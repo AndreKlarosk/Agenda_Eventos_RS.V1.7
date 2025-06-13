@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ELEMENTOS DO MODAL
     const eventModal = document.getElementById('event-modal');
     const modalTitle = document.getElementById('modal-title');
-    const eventIdInput = document.getElementById('event-id');
+    const eventIdInput = document = document.getElementById('event-id');
     const eventTitleInput = document.getElementById('event-title-input'); // General title, now optional
     const eventDescInput = document.getElementById('event-desc-input');
     const saveEventBtn = document.getElementById('save-event-btn');
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         batismoMocidadeOptionsDiv.style.display = 'none';
         ensaioRegionalOptionsDiv.style.display = 'none';
         ensaioLocalOptionsDiv.style.display = 'none';
-        eventTitleInput.style.display = 'none'; // Hide general title by default
+        document.getElementById('general-title-input-div').style.display = 'none'; // Ensure general title is hidden by default
 
         // Show specific divs based on event type
         if (eventType === 'Reunião') {
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (eventType === 'Ensaio Local') {
             ensaioLocalOptionsDiv.style.display = 'block';
         } else if (eventType === 'Outro') { // Show general title input for "Outro" type
-            eventTitleInput.style.display = 'block';
+            document.getElementById('general-title-input-div').style.display = 'block';
         }
         // City input is always visible, no need to manage its display here.
     }
@@ -185,7 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Populate specific inputs based on event type
                     if (event.eventType === 'Reunião') {
-                        // city is already handled by general cityInput
+                        // Mark reuniao type checkboxes
+                        reuniaoTypeCheckboxes.forEach(checkbox => {
+                            checkbox.checked = event.reuniaoTypes && event.reuniaoTypes.includes(checkbox.value);
+                        });
                     } else if (event.eventType === 'Batismo' || event.eventType === 'Reunião para Mocidade') {
                         ancientsNameInput.value = event.ancientsName || '';
                     } else if (event.eventType === 'Ensaio Regional') {
@@ -197,15 +200,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         eventTitleInput.value = event.title || ''; // Only set title for 'Outro'
                     }
 
-
-                    // Mark participant checkboxes
+                    // Mark participant checkboxes (common to all event types)
                     participantCheckboxes.forEach(checkbox => {
                         checkbox.checked = event.participants && event.participants.includes(checkbox.value);
-                    });
-
-                    // Mark reuniao type checkboxes
-                    reuniaoTypeCheckboxes.forEach(checkbox => {
-                        checkbox.checked = event.reuniaoTypes && event.reuniaoTypes.includes(checkbox.value);
                     });
 
                     modalTitle.textContent = 'Editar Evento';
@@ -476,7 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // For "Detalhes" column in 'Reunião' events
                     if (event.reuniaoTypes.length > 1) {
                         // If there's more than one reunion type, list the *other* types
-                        const otherReunionTypes = event.reuniaoTypes.slice(1); // Exclude the first one
+                        const otherReunionTypes = event.reuniaoTypes.slice(1); // Exclude the first one already displayed
                         const otherFullNames = otherReunionTypes.map(type => reuniaoFullNames[type] || type);
                         eventDetails = `Outros tipos: ${otherFullNames.join(', ')}`;
                     } else {
