@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ELEMENTOS DO MODAL
     const eventModal = document.getElementById('event-modal');
     const modalTitle = document.getElementById('modal-title');
-    const eventIdInput = document = document.getElementById('event-id');
+    const eventIdInput = document.getElementById('event-id');
     const eventTitleInput = document.getElementById('event-title-input'); // General title, now optional
     const eventDescInput = document.getElementById('event-desc-input');
     const saveEventBtn = document.getElementById('save-event-btn');
@@ -40,16 +40,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const participantCheckboxes = document.querySelectorAll('input[name="event-participant"]');
     const reuniaoTypeCheckboxes = document.querySelectorAll('input[name="reuniao-type"]'); // For RMA, RRM, etc.
 
-    // Mapping for full event names
+    // Mapping for full event names - UPDATED WITH YOUR LIST
     const reuniaoFullNames = {
-        'RMA': 'RMA - Reunião Ministerial de Anciães',
         'RRM': 'RRM - Reunião Regional Ministerial',
-        'RRA': 'RRA - Reunião Regional de Anciães',
-        'RCJM': 'RCJM - Reunião de Conselhos e Jovens e Menores',
-        'RCAD': 'RCAD - Reunião de Conselhos e Administração',
-        'RSM': 'RSM - Reunião de Sincronismo Ministerial',
-        'REP': 'REP - Reunião de Encarregados de Orquestra e Pessoas',
-        'RAP': 'RAP - Reunião de Administradores e Porteiros'
+        'RMA': 'RMA - Reunião do Ministério e Administração',
+        'RML': 'RML - Reunião Ministerial Local',
+        'RRA': 'RRA - Reunião Regional Administrativa',
+        'RA': 'RA - Reunião Administrativa',
+        'RTA': 'RTA - Reunião de Trabalho Administrativo',
+        'RPA': 'RPA - Reunião de Pauta Administrativa',
+        'RPO': 'RPO - Reunião de Partilha das Ofertas',
+        'RSM': 'RSM - Reunião do Setor Musica',
+        'RAP': 'RAP - Reunião de Atendimento da Piedade',
+        'RCP': 'RCP - Reunião de Conselhos para Piedade',
+        'AGE': 'AGE - Assembleia Geral Extraordinária',
+        'AGO': 'AGO - Assembleia Geral Ordinária',
+        'RAM': 'RAM - Reunião de Aconselhamento Ministerial',
+        'RGA': 'RGA - Reunião Geral Administrativa',
+        'RGE': 'RGE - Reunião Geral de Ensinamentos',
+        'RS': 'RS - Reunião de Setor'
     };
 
     // ESTADO DO CALENDÁRIO
@@ -472,8 +481,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // For "Detalhes" column in 'Reunião' events
                     if (event.reuniaoTypes.length > 1) {
-                        // If there's more than one reunion type, list the *other* types
-                        const otherReunionTypes = event.reuniaoTypes.slice(1); // Exclude the first one already displayed
+                        // If there's more than one reunion type, list the *additional* types
+                        // Filter out the first type so it's not repeated in "Detalhes"
+                        const otherReunionTypes = event.reuniaoTypes.filter((type, index) => index !== 0);
                         const otherFullNames = otherReunionTypes.map(type => reuniaoFullNames[type] || type);
                         eventDetails = `Outros tipos: ${otherFullNames.join(', ')}`;
                     } else {
